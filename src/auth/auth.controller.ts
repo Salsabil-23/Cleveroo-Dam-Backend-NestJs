@@ -111,8 +111,7 @@ async updateParentPassword(
     body.confirmPassword,
   );
 }
-
-@Post('forgot-password')
+ @Post('forgot-password')
   @ApiBody({
     schema: {
       type: 'object',
@@ -122,27 +121,77 @@ async updateParentPassword(
       required: ['email'],
     },
   })
-  @ApiResponse({ status: 200, description: 'Password reset email sent successfully' })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Reset code sent to email successfully' 
+  })
+  @ApiResponse({ 
+    status: 404, 
+    description: 'Email not found' 
+  })
   async forgotPassword(@Body('email') email: string) {
     return this.authService.requestPasswordReset(email);
   }
 
+  // 🔹 Étape 2 : Vérifier le code
+  @Post('verify-reset-code')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        email: { type: 'string', example: 'parent@example.com' },
+        code: { type: 'string', example: '123456' },
+      },
+      required: ['email', 'code'],
+    },
+  })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Code verified successfully' 
+  })
+  @ApiResponse({ 
+    status: 400, 
+    description: 'Invalid or expired code' 
+  })
+  async verifyResetCode(@Body() body: { email: string; code: string }) {
+    return this.authService.verifyResetCode(body.email, body.code);
+  }
+
+  // 🔹 Étape 3 : Réinitialiser le mot de passe
   @Post('reset-password')
   @ApiBody({
     schema: {
       type: 'object',
       properties: {
         email: { type: 'string', example: 'parent@example.com' },
-        token: { type: 'string', example: 'the-token-from-email' },
+        code: { type: 'string', example: '123456' },
         newPassword: { type: 'string', example: 'NewPass123' },
         confirmPassword: { type: 'string', example: 'NewPass123' },
       },
-      required: ['email', 'token', 'newPassword', 'confirmPassword'],
+      required: ['email', 'code', 'newPassword', 'confirmPassword'],
     },
   })
-  @ApiResponse({ status: 200, description: 'Password reset successfully' })
-  async resetPassword(@Body() body: { email: string; token: string; newPassword: string; confirmPassword: string }) {
-    return this.authService.resetPassword(body.email, body.token, body.newPassword, body.confirmPassword);
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Password reset successfully' 
+  })
+  @ApiResponse({ 
+    status: 400, 
+    description: 'Invalid code or passwords do not match' 
+  })
+  async resetPassword(
+    @Body() body: { 
+      email: string; 
+      code: string; 
+      newPassword: string; 
+      confirmPassword: string;
+    }
+  ) {
+    return this.authService.resetPassword(
+      body.email, 
+      body.code, 
+      body.newPassword, 
+      body.confirmPassword
+    );
   }
-
 }

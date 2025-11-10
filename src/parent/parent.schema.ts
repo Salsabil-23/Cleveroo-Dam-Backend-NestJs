@@ -26,10 +26,10 @@ export class Parent extends Document {
   child: Types.ObjectId;
 
    @Prop()
-  resetPasswordToken?: string; // 🔹 token for password reset
+  resetPasswordCode?: string;
 
   @Prop()
-  resetPasswordExpires?: Date; // 🔹 expiry time
+  resetPasswordExpires?: Date;
 }
 
 export const ParentSchema = SchemaFactory.createForClass(Parent);

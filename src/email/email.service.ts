@@ -45,23 +45,51 @@ export class EmailService {
     }
   }
 
-  async sendResetPasswordEmail(to: string, resetLink: string) {
-  const user = this.configService.get<string>('EMAIL_USER');
+  async sendResetCodeEmail(to: string, code: string) {
+    const user = this.configService.get<string>('EMAIL_USER');
 
-  const mailOptions = {
-    from: `"Cleveroo" <${user}>`,
-    to,
-    subject: 'Password Reset Request',
-    html: `<p>You requested a password reset.</p>
-           <p>Click <a href="${resetLink}">here</a> to reset your password. This link will expire in 1 hour.</p>`,
-  };
+    const mailOptions = {
+      from: `"Cleveroo 🌈" <${user}>`,
+      to,
+      subject: '🔐 Your Password Reset Code',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="text-align: center; margin-bottom: 30px;">
+            <h1 style="color: #AB47BC;">🌈 Cleveroo</h1>
+          </div>
+          
+          <div style="background: linear-gradient(135deg, #AAF0D1, #80DEEA); padding: 30px; border-radius: 15px; text-align: center;">
+            <h2 style="color: white; margin-bottom: 20px;">Password Reset Code</h2>
+            <p style="color: white; font-size: 16px; margin-bottom: 20px;">
+              Use this code to reset your password:
+            </p>
+            
+            <div style="background: white; padding: 20px; border-radius: 10px; margin: 20px 0;">
+              <span style="font-size: 36px; font-weight: bold; color: #AB47BC; letter-spacing: 5px;">
+                ${code}
+              </span>
+            </div>
+            
+            <p style="color: white; font-size: 14px; margin-top: 20px;">
+              ⏰ This code will expire in <strong>15 minutes</strong>
+            </p>
+          </div>
+          
+          <div style="margin-top: 30px; text-align: center; color: #666; font-size: 12px;">
+            <p>If you didn't request this code, please ignore this email.</p>
+            <p>Never share this code with anyone.</p>
+          </div>
+        </div>
+      `,
+    };
 
-  try {
-    const info = await this.transporter.sendMail(mailOptions);
-    console.log('Reset email sent to', to, 'MessageId:', info.messageId);
-  } catch (error) {
-    console.error('Error sending reset email', error);
+    try {
+      const info = await this.transporter.sendMail(mailOptions);
+      console.log('Reset code sent to', to, 'MessageId:', info.messageId);
+    } catch (error) {
+      console.error('Error sending reset code email:', error);
+      throw new Error('Failed to send reset code email');
+    }
   }
-}
 
 }

@@ -168,43 +168,89 @@ async updateChildProfile(childId: string, username?: string, age?: number) {
   return { message: 'Password updated successfully for parent and child' };
 }
 
-// 🔹 Request password reset
+// 🔹 Étape 1 : Demander un code de réinitialisation
   async requestPasswordReset(email: string) {
     const parent = await this.parentModel.findOne({ email });
-    if (!parent) throw new NotFoundException('Email not found');
+    if (!parent) {
+      throw new NotFoundException('Email not found');
+    }
 
-    // Generate a secure random token
-    const token = randomBytes(32).toString('hex');
-    const expires = new Date(Date.now() + 3600 * 1000); // 1 hour expiry
+    // Générer un code à 6 chiffres
+    const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const expires = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes d'expiration
 
-    parent.resetPasswordToken = token;
+    parent.resetPasswordCode = resetCode;
     parent.resetPasswordExpires = expires;
     await parent.save();
 
-    // Send the email with the reset link
-    const resetLink = `http://your-frontend-url/reset-password?token=${token}&email=${email}`;
-    await this.emailService.sendResetPasswordEmail(email, resetLink);
+    // Envoyer le code par email
+    await this.emailService.sendResetCodeEmail(email, resetCode);
 
-    return { message: 'Password reset email sent' };
+    return { 
+      message: 'Reset code sent to your email',
+      expiresIn: '15 minutes'
+    };
   }
-async resetPassword(email: string, token: string, newPassword: string, confirmPassword: string) {
-    const parent = await this.parentModel.findOne({ email, resetPasswordToken: token });
-    if (!parent) throw new BadRequestException('Invalid token');
 
-    if (!parent.resetPasswordExpires || parent.resetPasswordExpires < new Date()) {
-      throw new BadRequestException('Token expired');
+  // 🔹 Étape 2 : Vérifier le code de réinitialisation
+  async verifyResetCode(email: string, code: string) {
+    const parent = await this.parentModel.findOne({ 
+      email, 
+      resetPasswordCode: code 
+    });
+
+    if (!parent) {
+      throw new BadRequestException('Invalid code');
     }
 
+    if (!parent.resetPasswordExpires || parent.resetPasswordExpires < new Date()) {
+      throw new BadRequestException('Code expired. Please request a new one');
+    }
+
+    return { 
+      message: 'Code verified successfully',
+      valid: true 
+    };
+  }
+
+  // 🔹 Étape 3 : Réinitialiser le mot de passe
+  async resetPassword(
+    email: string, 
+    code: string, 
+    newPassword: string, 
+    confirmPassword: string
+  ) {
+    // Vérifier que le code est valide
+    const parent = await this.parentModel.findOne({ 
+      email, 
+      resetPasswordCode: code 
+    });
+
+    if (!parent) {
+      throw new BadRequestException('Invalid code');
+    }
+
+    if (!parent.resetPasswordExpires || parent.resetPasswordExpires < new Date()) {
+      throw new BadRequestException('Code expired. Please request a new one');
+    }
+
+    // Vérifier que les mots de passe correspondent
     if (newPassword !== confirmPassword) {
       throw new BadRequestException('Passwords do not match');
     }
 
+    // Valider la force du mot de passe
+    if (newPassword.length < 6) {
+      throw new BadRequestException('Password must be at least 6 characters');
+    }
+
+    // Hasher le nouveau mot de passe
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     parent.password = hashedPassword;
-    parent.resetPasswordToken = undefined;
+    parent.resetPasswordCode = undefined;
     parent.resetPasswordExpires = undefined;
 
-    // Optionally, also update the child password if you want
+    // Mettre à jour aussi le mot de passe de l'enfant
     if (parent.child) {
       const child = await this.childModel.findById(parent.child);
       if (child) {
@@ -214,7 +260,11 @@ async resetPassword(email: string, token: string, newPassword: string, confirmPa
     }
 
     await parent.save();
-    return { message: 'Password reset successfully' };
-  }
 
+    return { 
+      message: 'Password reset successfully',
+      success: true 
+    };
+  }
 }
+

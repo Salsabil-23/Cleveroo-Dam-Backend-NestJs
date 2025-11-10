@@ -266,5 +266,21 @@ async updateChildProfile(childId: string, username?: string, age?: number) {
       success: true 
     };
   }
+
+  // 🔹 Update parent profile!
+async updateParentProfile(parentId: string, email?: string, phone?: string) {
+  const parent = await this.parentModel.findById(parentId);
+  if (!parent) throw new NotFoundException('Parent not found');
+
+  if (email) parent.email = email;
+  if (phone) parent.phone = phone;
+
+  await parent.save();
+
+  return {
+    message: 'Parent profile updated successfully',
+    parent,
+  };
+}
 }
 

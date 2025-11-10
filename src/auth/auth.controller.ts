@@ -194,4 +194,15 @@ async updateParentPassword(
       body.confirmPassword
     );
   }
+
+  @UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
+@Patch('profile/parent')
+async updateParentProfile(
+  @Request() req,
+  @Body() body: { email?: string; phone?: string },
+) {
+  const userId = req.user.id;
+  return this.authService.updateParentProfile(userId, body.email, body.phone);
+}
 }
